@@ -6,138 +6,130 @@ Chạy: python 03_Training.py
 """
 
 import pandas as pd
-import numpy as np
+import numpy  as np
 import joblib
 import time
 import os
 
-from sklearn.ensemble      import RandomForestClassifier
-from sklearn.svm           import SVC
-from sklearn.naive_bayes   import GaussianNB
-from sklearn.neighbors     import KNeighborsClassifier
+from sklearn.ensemble       import RandomForestClassifier, VotingClassifier
+from sklearn.svm            import SVC
 from sklearn.neural_network import MLPClassifier
-from sklearn.tree          import DecisionTreeClassifier
-from xgboost               import XGBClassifier
-from sklearn.metrics       import (
-    accuracy_score, precision_score,
-    recall_score, f1_score
-)
+from sklearn.model_selection import cross_val_score, GridSearchCV
+from sklearn.metrics        import accuracy_score, f1_score
+from xgboost                import XGBClassifier
 
 os.makedirs('../results', exist_ok=True)
 
 print("=" * 60)
-print("  🏋️   TRAIN CÁC MÔ HÌNH")
+print("  🚀  TRAIN V2 - TỐI ƯU HÓA")
 print("=" * 60)
 
-# ── Load dữ liệu ─────────────────────────────────────────────
+# ── Load ─────────────────────────────────────────────────────
 X_train = joblib.load('../models/X_train.pkl')
 X_test  = joblib.load('../models/X_test.pkl')
 y_train = joblib.load('../models/y_train.pkl')
 y_test  = joblib.load('../models/y_test.pkl')
 
-print(f"\n✅ Dữ liệu: Train {X_train.shape} | Test {X_test.shape}")
-print(f"   Số lớp: {len(np.unique(y_train))}")
+print(f"\n✅ Train: {X_train.shape} | Test: {X_test.shape}")
 
-# ── Định nghĩa các mô hình ───────────────────────────────────
-models = {
-    "Decision Tree":  DecisionTreeClassifier(
-        max_depth=20,
-        random_state=42
-    ),
-    "Random Forest":  RandomForestClassifier(
-        n_estimators=100,
-        max_depth=None,
-        n_jobs=-1,
-        random_state=42
-    ),
-    "SVM":            SVC(
-        kernel='rbf',
-        C=10,
-        probability=True,
-        random_state=42
-    ),
-    "Naive Bayes":    GaussianNB(),
-    "KNN":            KNeighborsClassifier(
-        n_neighbors=5,
-        metric='euclidean',
-        n_jobs=-1
-    ),
-    "Neural Network": MLPClassifier(
-        hidden_layer_sizes=(256, 128, 64),
-        activation='relu',
-        max_iter=500,
-        early_stopping=True,
-        random_state=42
-    ),
-    "XGBoost":        XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.1,
-        eval_metric='mlogloss',
-        use_label_encoder=False,
-        n_jobs=-1,
-        random_state=42
-    ),
+# ── 1. Tìm tham số tốt nhất cho Random Forest ────────────────
+print("\n" + "─"*50)
+print("⏳ GridSearch - Tìm tham số tốt nhất cho Random Forest...")
+print("   (Mất 3-5 phút)")
+
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth':    [None, 20],
+    'min_samples_split': [2, 5],
 }
 
-# ── Train từng mô hình ───────────────────────────────────────
-results = []
-trained = {}
+rf_grid = GridSearchCV(
+    RandomForestClassifier(random_state=42, n_jobs=-1),
+    param_grid,
+    cv           = 3,
+    scoring      = 'f1_weighted',
+    n_jobs       = -1,
+    verbose      = 1,
+)
+rf_grid.fit(X_train, y_train)
 
-for name, model in models.items():
-    print(f"\n{'─'*50}")
-    print(f"⏳ Training: {name}...")
-    start = time.time()
+best_rf     = rf_grid.best_estimator_
+best_params = rf_grid.best_params_
+print(f"\n✅ Tham số tốt nhất: {best_params}")
 
-    model.fit(X_train, y_train)
-    elapsed = round(time.time() - start, 2)
-    trained[name] = model
+y_pred_rf = best_rf.predict(X_test)
+acc_rf    = accuracy_score(y_test, y_pred_rf)
+f1_rf     = f1_score(y_test, y_pred_rf, average='weighted')
+print(f"   Accuracy: {acc_rf*100:.2f}% | F1: {f1_rf*100:.2f}%")
 
-    y_pred = model.predict(X_test)
+# ── 2. Cross-validation ──────────────────────────────────────
+print("\n" + "─"*50)
+print("⏳ Cross-validation 5-fold...")
 
-    acc  = accuracy_score (y_test, y_pred)
-    prec = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-    rec  = recall_score   (y_test, y_pred, average='weighted', zero_division=0)
-    f1   = f1_score       (y_test, y_pred, average='weighted', zero_division=0)
+cv_scores = cross_val_score(
+    best_rf, X_train, y_train,
+    cv=5, scoring='f1_weighted', n_jobs=-1
+)
+print(f"✅ CV Scores: {[f'{s*100:.1f}%' for s in cv_scores]}")
+print(f"   Mean: {cv_scores.mean()*100:.2f}% ± {cv_scores.std()*100:.2f}%")
 
-    results.append({
-        'Model':      name,
-        'Accuracy':   round(acc  * 100, 2),
-        'Precision':  round(prec * 100, 2),
-        'Recall':     round(rec  * 100, 2),
-        'F1-Score':   round(f1   * 100, 2),
-        'Time (s)':   elapsed,
-    })
+# ── 3. Ensemble Model (kết hợp nhiều model) ──────────────────
+print("\n" + "─"*50)
+print("⏳ Tạo Ensemble Model (Voting Classifier)...")
+print("   Kết hợp: Random Forest + XGBoost + Neural Network")
 
-    print(f"  ✅ Accuracy : {acc*100:.2f}%")
-    print(f"     F1-Score : {f1*100:.2f}%")
-    print(f"     Time     : {elapsed}s")
+ensemble = VotingClassifier(
+    estimators=[
+        ('rf',  best_rf),
+        ('xgb', XGBClassifier(n_estimators=100, eval_metric='mlogloss',
+                              random_state=42, n_jobs=-1)),
+        ('mlp', MLPClassifier(hidden_layer_sizes=(256, 128),
+                              max_iter=300, random_state=42)),
+    ],
+    voting  = 'soft',
+    n_jobs  = -1,
+)
 
-# ── Bảng kết quả ────────────────────────────────────────────
-df_results = pd.DataFrame(results).sort_values('F1-Score', ascending=False)
-df_results = df_results.reset_index(drop=True)
-df_results.index += 1  # Bắt đầu từ 1
+start = time.time()
+ensemble.fit(X_train, y_train)
+elapsed = round(time.time() - start, 2)
 
-print(f"\n{'='*60}")
-print("  📊  BẢNG SO SÁNH CÁC MÔ HÌNH")
-print(f"{'='*60}")
-print(df_results.to_string())
+y_pred_ens = ensemble.predict(X_test)
+acc_ens    = accuracy_score(y_test, y_pred_ens)
+f1_ens     = f1_score(y_test, y_pred_ens, average='weighted')
+print(f"✅ Ensemble — Accuracy: {acc_ens*100:.2f}% | F1: {f1_ens*100:.2f}% | {elapsed}s")
 
-df_results.to_csv('../results/model_comparison.csv', index=True)
-print(f"\n✅ Đã lưu: results/model_comparison.csv")
+# ── 4. Chọn model tốt nhất ───────────────────────────────────
+print("\n" + "─"*50)
+print("📊 So sánh:")
+print(f"   Random Forest (tuned): {acc_rf*100:.2f}%")
+print(f"   Ensemble:              {acc_ens*100:.2f}%")
 
-# ── Lưu model tốt nhất ──────────────────────────────────────
-best_name  = df_results.iloc[0]['Model']
-best_model = trained[best_name]
-joblib.dump(best_model, '../models/best_model.pkl')
+if f1_ens >= f1_rf:
+    final_model      = ensemble
+    final_model_name = "Ensemble (RF+XGB+MLP)"
+    print(f"\n🏆 Chọn: Ensemble")
+else:
+    final_model      = best_rf
+    final_model_name = f"Random Forest (tuned: {best_params})"
+    print(f"\n🏆 Chọn: Random Forest")
 
-print(f"\n🏆 Model tốt nhất: {best_name}")
-print(f"   Accuracy : {df_results.iloc[0]['Accuracy']}%")
-print(f"   F1-Score : {df_results.iloc[0]['F1-Score']}%")
-print(f"\n✅ Đã lưu: models/best_model.pkl")
+# ── 5. Lưu model ─────────────────────────────────────────────
+joblib.dump(final_model, '../models/best_model.pkl',
+            compress=('lz4', 3))   # Nén để load nhanh hơn
 
-# Lưu tên model tốt nhất để dùng sau
 with open('../models/best_model_name.txt', 'w') as f:
-    f.write(best_name)
+    f.write(final_model_name)
 
-print("\n✅ Training hoàn thành! Chạy tiếp: python 04_Evaluation.py")
+# Lưu CV results
+cv_df = pd.DataFrame({
+    'Fold':    range(1, 6),
+    'F1':      [f'{s*100:.2f}%' for s in cv_scores],
+    'Mean':    [f'{cv_scores.mean()*100:.2f}%'] * 5,
+    'Std':     [f'±{cv_scores.std()*100:.2f}%'] * 5,
+})
+cv_df.to_csv('../results/cross_validation.csv', index=False)
+
+print(f"\n✅ Đã lưu model: {final_model_name}")
+print("✅ Đã lưu: results/cross_validation.csv")
+print("\n✅ Hoàn thành! Chạy tiếp: python 04_Evaluation.py")
