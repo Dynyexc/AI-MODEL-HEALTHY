@@ -20,7 +20,7 @@ print("  🧹  TIỀN XỬ LÝ DỮ LIỆU")
 print("=" * 60)
 
 # ── 1. Load ──────────────────────────────────────────────────
-df = pd.read_csv('../data/disease_dataset.csv')
+df = pd.read_csv('../data/disease_dataset_extended.csv')
 print(f"\n✅ Loaded: {df.shape[0]} mẫu, {df.shape[1]} cột")
 
 symptom_cols = [c for c in df.columns if c != 'Disease']

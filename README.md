@@ -48,10 +48,11 @@ pip install -r requirements.txt
 ```bash
 cd notebooks
 
-python 01_EDA.py            # ~30 giây
-python 02_Preprocessing.py  # ~2 phút (SMOTE)
-python 03_Training.py       # ~5-15 phút
-python 04_Evaluation.py     # ~1 phút
+python 01_EDA.py            
+python extend_dataset.py
+python 02_Preprocessing.py  
+python 03_Training.py      = NẾU BỊ LỖI THÌ CÀI THÊM (pip install lz4 --break-system-packages)
+python 04_Evaluation.py     
 ```
 
 ---
@@ -120,3 +121,8 @@ py -3.11 -m pip --version
 py -3.11 -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
+
+## BƯỚC 5 Thêm dữ liệu về bệnh bằng cách
+- Mở file extend_dataset.py, tìm phần VIETNAM_DISEASES và thêm vào cuối 
+
+L
