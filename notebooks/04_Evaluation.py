@@ -191,4 +191,4 @@ print("     results/01_EDA_analysis.png")
 print("     results/02_evaluation_charts.png")
 
 print("\n✅ Đánh giá hoàn thành!")
-print("👉 Bước tiếp: cd ../ai_api && uvicorn main:app --reload --port 8000")
+print("\n Bước tiếp theo chạy DeepLearning: python 05_DeepLearning.py" )
