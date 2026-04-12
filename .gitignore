@@ -1,3 +1,17 @@
+# Environment (chứa credentials - KHÔNG được commit)
+.env
+.env.*
+
+# Node.js
+node_modules/
+dist/
+
+# Upload files
+uploads/
+
+# Claude AI memory
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]
