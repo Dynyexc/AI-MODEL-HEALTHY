@@ -13,6 +13,25 @@ export class CreateConsultationDto {
   symptoms!: string[];
 }
 
+export class AnalyzeTextDto {
+  @ApiProperty({
+    description: 'Câu văn tiếng Việt mô tả triệu chứng',
+    example: 'Tôi bị đau đầu, sốt cao và mệt mỏi từ 2 hôm nay',
+  })
+  @IsString()
+  text!: string;
+}
+
+export class ChatReplyDto {
+  @ApiProperty({ description: 'Session ID từ /chat/start', example: 'a1b2c3d4' })
+  @IsString()
+  sessionId!: string;
+
+  @ApiProperty({ description: 'Câu trả lời', example: 'Có' })
+  @IsString()
+  answer!: string;
+}
+
 export class FeedbackDto {
   @ApiProperty({ description: 'Đánh giá từ 1-5', example: 4, minimum: 1, maximum: 5 })
   @IsNumber()

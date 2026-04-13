@@ -4,19 +4,23 @@ import { Document, Types } from 'mongoose';
 export type ConsultationDocument = Consultation & Document;
 
 class Top3Item {
-  disease: string;
-  confidence: number;
+  disease_vi!: string;
+  disease_en!: string;
+  confidence!: number;
 }
 
 class AiResult {
-  disease: string;
-  confidence: number;
-  top3: Top3Item[];
+  disease_vi!: string;
+  disease_en!: string;
+  confidence!: number;
+  severity!:   string;
+  specialty!:  string;
+  top3!:       Top3Item[];
 }
 
 class UserFeedback {
-  rating: number;
-  comment?: string;
+  rating!:   number;
+  comment?:  string;
 }
 
 @Schema({ timestamps: true })
@@ -26,6 +30,9 @@ export class Consultation {
 
   @Prop({ type: [String], required: true })
   symptoms: string[];
+
+  @Prop({ default: null })
+  inputText?: string;         // Câu văn gốc nếu nhập NLP
 
   @Prop({ type: Object })
   aiResult: AiResult;

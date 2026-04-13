@@ -570,6 +570,24 @@ def predict_and_report(request: PredictAndReportRequest):
         }
     )
 
+@app.post("/report")
+def download_report(request: DownloadReportRequest):
+    """Tạo PDF từ kết quả tư vấn có sẵn (không re-predict)"""
+    try:
+        pdf_bytes = build_pdf_bytes(request.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi tạo PDF: {str(e)}")
+    d_en = request.disease_en.replace(' ', '_')
+    filename = f"tuvan_{d_en}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Length": str(len(pdf_bytes)),
+        }
+    )
+
 @app.post("/compare")
 def compare(request: CompareRequest):
     if model is None: raise HTTPException(503,"Model chưa load")
